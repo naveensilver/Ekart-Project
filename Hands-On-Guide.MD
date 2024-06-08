@@ -64,7 +64,7 @@ sudo systemctl start jenkins
 # Check Jenkins service status
 sudo systemctl status jenkins
 ```
-**Install Docker in Jenkins VM"
+**Install Docker in Jenkins VM"**
 ```
 #installs Docker on your system
 sudo apt install docker.io
@@ -284,103 +284,72 @@ Here, we install `Config File Provider` Plugin, then we get `Managed Files` Opti
         - ID: `global-maven`
         - Content: `<credentials of the nexus server>`
 
-3. **Configure POM.xml in Your Project**
-
-    - **For Maven Release**:
-
-        ```xml
-        <server>
-          <id>maven-releases</id>
-          <username><YOUR USERNAME for NEXUS></username>
-          <password><YOUR PASSWORD for NEXUS></password>
-        </server>
-        ```
-
-    - **For Maven Snapshot**:
-
-        ```xml
-        <server>
-          <id>maven-snapshots</id>
-          <username><YOUR USERNAME for NEXUS></username>
-          <password><YOUR PASSWORD for NEXUS></password>
-        </server>
-        ```
-
-4. **Add Repositories in POM.xml**
-
-    ```xml
-    <repository>
-      <id>maven-releases</id>
-      <name>maven-releases</name>
-      <url><URL LINK FOR THE MAVEN RELEASE FROM NEXUS REPOSITORIES></url>
-    </repository>
-    <snapshotRepository>
-      <id>maven-snapshots</id>
-      <name>maven-snapshots</name>
-      <url><URL LINK FOR THE MAVEN SNAPSHOTS FROM NEXUS REPOSITORIES></url>
-    </snapshotRepository>
-    ```
-+++++++++++++
-
-We must add a new plugin for connecting the Nexus to the Jenkins Dashboard; known as "managed files"
-
-
-It will show us the managed file under the path manage Jenkins => Managed Files => Add a new config file
+In the content section you will find below block from under the commented section and add them into config file.
 ```
-name: global maven settings.xml
-
-id: global-maven
-
-content: < credentials of the nexus server>
-```
-
-We will be using the two repositories of the Nexus which are the "maven-release" and "maven-snapshot"
-
-Where we will push our artifact that the Help of the POM.xml file will decide under the <versions></versions> it can either be 0.0.1-SNAPSHOT or 0.0.1
-
-If it's 0.0.1-SNAPSHOT: It means that the generated artifact is still in the development phases and it is not yet ready for production(release) we will store it under the maven-snapshot repository
-
-If it's 0.0.1: It means that the artifact is ready for release; we will store it under the maven-release repository.
-
-### pom.xml URL GitHub
-
-```
- #Copy this block from under the commented section and add them into the 
     <server>
       <id>deploymentRepo</id>
       <username>repouser</username>
       <password>repopwd</password>
     </server>
-# Alter the contents of them like
-# For maven release
-    <server>
-      <id>maven-releases</id>
-      <username><YOUR USERNAME for NEXUS></username>
-      <password><YOUR PASSWORD for NEXUS></password>
-    </server>
-# For maven snapshots
-    <server>
-      <id>maven-snapshot</id>
-      <username><YOUR USERNAME for NEXUS></username>
-      <password><YOUR PASSWORD for NEXUS></password>
-    </server>
 ```
-Make changes in the POM.xml file
-```
-# In the <repository></repository>
-# Add the URL for both the maven-release and maven-snapshot in the above tag
+Alter the contents of them like "maven-release" and "maven-snapshot"
 
+3. **Configure Nexus Credentials in Config File Management**
+
+    - **For Maven Release**:
+        ```
+        <server>
+          <id>maven-releases</id>
+          <username><YOUR USERNAME for NEXUS></username>   #add nexus username
+          <password><YOUR PASSWORD for NEXUS></password>   #add nexus password 
+        </server>
+        ```
+
+    - **For Maven Snapshot**:
+
+        ```
+        <server>
+          <id>maven-snapshots</id>
+          <username><YOUR USERNAME for NEXUS></username>   #add nexus username
+          <password><YOUR PASSWORD for NEXUS></password>   #add nexus password
+        </server>
+        ```
+Now, Click on submit.
+
+4. **Add Repositories in POM.xml**
+
+Go to GitHub > POM.XML and Add the URL for both the `maven-release` and `maven-snapshot` in `<distributionManagement> </distributionManagement>` tag
+    ```
     <repository>
       <id>maven-releases</id>
       <name>maven-releases</name>
       <url><URL LINK FOR THE MAVEN RELEASE FROM NEXUS REPOSITORIES></url>
+    # <url>http://<Nexus_Public_IP>:8081/repository/maven-releases/</url>
+
     </repository>
+
     <snapshotRepository>
       <id>maven-snapshots</id>
       <name>maven-snapshots</name>
       <url><URL LINK FOR THE MAVEN SNAPSHOTS FROM NEXUS REPOSITORIES></url>
+    # <url>http://<Nexus_Public_IP>:8081/repository/maven-snapshots/</url>
+
     </snapshotRepository>
-```
+    ```
+### Using Nexus Repositories 
+
+We will be using two repositories in Nexus: `maven-release` and `maven-snapshot`.
+
+- **maven-release Repository**: Store stable, production-ready artifacts.
+  - It means that the artifact is ready for release; we will store it under the maven-release repository.
+  - Example Version: `0.0.1`
+
+- **maven-snapshot Repository**: Store development or in-progress artifacts.
+  - It means that the generated artifact is still in the development phases and it is not yet ready for production(release) we will store it under the maven-snapshot repository
+  - Example Version: `0.0.1-SNAPSHOT`
+
+Where, we will push our artifact that the Help of the POM.xml file will decide under the <versions></versions> it can either be 0.0.1-SNAPSHOT or 0.0.1
+
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 4. Setting Pipelines [Jenkins Server]
