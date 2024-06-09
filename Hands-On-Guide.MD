@@ -97,10 +97,10 @@ sudo chmod 666 /var/run/docker.sock
 
 **Jenkins Dashboard Login:**
 
-### Default Credentials
+Default Credentials: 
 
 - **Name:** admin
-- **Password:** cat <Path given in dialog box> (i.e., `sudo cat /var/lib/jenkins/secrets/initialAdminPassword`)
+- **Password:** sudo cat [Path given in dialog box] (i.e., `sudo cat /var/lib/jenkins/secrets/initialAdminPassword`)
 
 Explanation:
 
