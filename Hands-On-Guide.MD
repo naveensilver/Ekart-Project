@@ -144,8 +144,10 @@ Explanation:
 2. Configure JDK
 - Install JDK from Adoptium with a version above jdk17.3.4.
   - Set the name as "jdk17".
+  - Install JDK from Adoptium with a version above jdk17.3.4
+
 - If the application doesn't work with JDK17, install JDK11 as well.
-  - Install JDK from Adoptium with a version above jdk11.3.4.
+  - Install JDK from Adoptium with a version above jdk11.3.4
   - Set the name as "jdk11".
 
 3. Sonar Scanner Installations
