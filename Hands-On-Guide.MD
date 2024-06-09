@@ -647,3 +647,472 @@ stage('Deploy to Nexus') {
     }
 }
 ```
+
+# 5. Setting Up the Kubernetes Cluster
+
+To create a Kubernetes cluster on AWS, we need to set up 3 nodes with the following configuration:
+
+- 1 Master Node
+- 2 Worker Nodes
+
+Each node should have the following basic configuration:
+- Instance type: t2.medium
+- Storage: 15 GB
+- Instance count: 3
+
+Additionally, we need to ensure that the same Security Group used for Jenkins, Nexus, and Sonar is applied to these nodes.
+
+Furthermore, we should rename the nodes as follows:
+- Master Node: k8-Master
+- Worker Nodes: Worker-01, Worker-02
+
+### Setting Up the MasterNode and Worker Nodes [Using Kubeadm]
+
+To set up the Master Node and Worker Nodes using Kubeadm, follow these steps:
+
+1. Update the package repository and install Docker:
+
+```bash
+sudo apt-get update -y
+sudo apt-get install docker.io -y
+sudo service docker restart
+```
+2. Add the Kubernetes repository and update the package repository:
+
+```
+sudo curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" >/etc/apt/sources.list.d/kubernetes.list
+sudo apt-get update
+```
+3. Install Kubernetes components:
+
+```
+sudo apt install kubeadm=1.20.0-00 kubectl=1.20.0-00 kubelet=1.20.0-00 -y
+```
+Run all the above commands in both the Master and Worker Nodes. These commands will install Docker and Kubernetes components required for setting up the Master Node and Worker Nodes.
+
+### Setting Up the Master Node ONLY
+
+To set up the Master Node only, follow these steps:
+
+Initialize the Kubernetes master node and specify the Pod Network CIDR:
+
+```bash
+kubeadm init --pod-network-cidr=192.168.0.0/16
+```
+After running the above command as the root user, it will generate a link to join other worker nodes at the end like the following:
+
+```
+kubeadm join 172.31.89.0:6443 --token iotnjn.b50nhy71wg2be2pc \
+    --discovery-token-ca-cert-hash sha256:d5cba19e1f3be8657c90e143a5b671ea9b39c9c5e749c6c66116a0a1ce3fecc9
+```
+Use this command to join other worker nodes to the cluster.
+
+
+**NOTE:** You can add the link to any number of VMs, but they must have the required `kubeadm` and `kubectl` installations preconfigured to function as Worker Nodes.
+
+Since we have designated Worker-01 and Worker-02 as dedicated worker nodes, we will use them for adding worker nodes. Run the above command on the worker nodes. After execution, it will display a message like this:
+```
+message: node has joined the cluster.
+```
+
+Additionally, the Master Node will provide output like the following:
+
+```
+Your Kubernetes control-plane has initialized successfully!
+
+To start using your cluster, you need to run the following as a regular user:
+
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+Alternatively, if you are the root user, you can run:
+
+export KUBECONFIG=/etc/kubernetes/admin.conf
+```
+
+We have two options for configuring the Kubernetes cluster:
+
+1. Generate the "kubeconfig" file as a non-root user:
+   - Run the following commands as a regular user:
+     ```
+     mkdir -p $HOME/.kube
+     sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+     sudo chown $(id -u):$(id -g) $HOME/.kube/config
+     ```
+
+2. Use the root user and export the configuration:
+   - Run the command:
+     ```
+     export KUBECONFIG=/etc/kubernetes/admin.conf
+     ```
+
+Once the configuration is set up, proceed to install the CNI Plugin (Calico) and Ingress Controller in the master plane:
+
+```bash
+# Install Calico (by manifest files)
+kubectl apply -f https://docs.projectcalico.org/v3.20/manifests/calico.yaml
+
+# Install Ingress Controller
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.49.0/deploy/static/provider/baremetal/deploy.yaml
+```
+### Creation of Service Account
+
+**What is a Service Account?**
+
+A service account is a type of non-human account that, in Kubernetes, provides a distinct identity in a Kubernetes cluster. Application Pods, system components, and entities inside and outside the cluster can use a specific ServiceAccount's credentials to identify as that ServiceAccount.
+
+Service accounts are a namespace.
+
+Service accounts exist in the cluster and are defined in the Kubernetes API. You can quickly create service accounts to enable specific tasks.
+
+We need to create the service account for the Jenkins user so that it can create the necessary Kubernetes resources when the application gets deployed.
+```
+# Add a YAML file for ServiceAccount
+# Create sa.yml file with the following content:
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jenkins
+  namespace: webapps
+
+# Here in our master node the namespace: `webapps` does not exist so Create the namespace 'webapps'
+kubectl create namespace webapps
+
+# Apply the changes to the YAML file
+kubectl apply -f sa.yml
+```
+### Creation of Role [For webapps Namespace]
+
+Roles in Kubernetes define the actions that a user can perform within a cluster or namespace. These roles can be assigned to Kubernetes subjects such as users, groups, or service accounts using role bindings and cluster role bindings.
+
+For our specific scenario, we are creating a role within the `webapps` namespace to govern the creation of Kubernetes resources. This role will grant permissions for various actions like getting, listing, watching, creating, updating, patching, and deleting resources such as pods, deployments, services, and more.
+
+To implement this, we need to define a role YAML file (`role.yml`) with the desired permissions, and then apply this YAML file to the Kubernetes cluster using the `kubectl apply` command. This will create the role named `app-role` within the `webapps` namespace.
+
+```
+# Create role.yml file with the following content:
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: app-role
+  namespace: webapps
+rules:
+  - apiGroups:
+       - ""
+       - apps
+       - autoscaling
+       - batch
+       - extensions
+       - policy
+       - rbac.authorization.k8s.io
+    resources:
+       - pods
+       - componentstatuses
+       - configmaps
+       - daemonsets
+       - deployments
+       - events
+       - endpoints
+       - horizontalpodautoscalers
+       - ingress
+       - jobs
+       - limitranges
+       - namespaces
+       - nodes
+       - persistentvolumes
+       - persistentvolumeclaims
+       - resourcequotas
+       - replicasets
+       - replicationcontrollers
+       - serviceaccounts
+       - services
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+```
+
+Apply the changes to create the role:
+
+```
+kubectl apply -f role.yml
+```
+This will create a role named `app-role` in the `webapps` namespace with the specified permissions.
+
+
+### Creation of Role Binding:
+
+To establish permissions for the Jenkins user within the `webapps` namespace, we need to create a role binding. This binding links the previously created role (app-role) with the Jenkins service account.
+
+The role binding YAML file (assign.yml) defines the association between the role and the service account, granting the Jenkins user the permissions specified in the role.
+
+Here's the content of the `assign.yml` file:
+
+```
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: app-rolebinding
+  namespace: webapps
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: app-role
+subjects:
+- namespace: webapps
+  kind: ServiceAccount
+  name: jenkins
+```
+After applying this configuration, Jenkins will possess the necessary permissions to manage Kubernetes resources within the `webapps` namespace. This setup adheres to best practices by utilizing a service account instead of the root account, ensuring proper access control and security within the Kubernetes environment.
+
+To apply the configuration defined in the `assign.yml` file and create the role binding, you can use the following command:
+
+```bash
+kubectl apply -f assign.yml
+```
+
+This command will instruct Kubernetes to read the configuration from the `assign.yml` file and apply it to the cluster. As a result, the role binding named `app-rolebinding` will be created in the `webapps` namespace, linking the `app-role` with the `jenkins` service account.
+
+Now using this our Jenkins user will have all the necessary permissions to create the pods and other Kubernetes resources.
+
+In real-time; we do not give the root account rather we could use the "service account" and add the "role" to manage the "role-binding" to give necessary permissions to Kubernetes Resources;
+
+**Note:**In Kubernetes, it's best practice to use service accounts with appropriate roles and role bindings to grant permissions to applications or users, rather than using the root account. By using service accounts and role-based access control (RBAC), you can enforce the principle of least privilege, ensuring that each component or user has only the permissions necessary to perform its intended tasks. This enhances security and reduces the risk of unauthorized access or accidental damage to the cluster.
+
+### Create Token for Service Account [Creation of Secret]
+
+Creating a token (secret) for a service account is essential for authenticating with the Kubernetes API. It's a standard practice to have a secret for every service account to ensure secure communication between components within the Kubernetes cluster.
+
+Here's how to create the secret.yml:
+
+```yaml
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/service-acount-token
+metadata:
+  name: mysecretname
+  annotations: 
+    kubernetes.io/service-account.name: jenkins
+```
+
+In the above secret configuration, we haven't specified any namespace. However, we need to add this secret to our newly created namespace, which is "webapps":
+
+```bash
+kubectl apply -f secret.yml -n webapps
+```
+
+This ensures that the Jenkins service account has a token (secret) available for authentication within the "webapps" namespace.
+
+To view the secret token, you can use either of the following commands:
+
+```bash
+kubectl -n webapps describe secret mysecretname
+```
+
+or
+
+```bash
+kubectl describe secret jenkins-token-<hash> -n webapps
+```
+
+Here is the token:
+
+```
+eyJhbGciOiJSUzI1NiIsImtpZCI6IlBLRmdGN2NsdFJqbjhaYmxycEp4VndxdGFsTWhGbEdVdldvMUpMQlRvbjAifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJ3ZWJhcHBzIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6ImplbmtpbnMtdG9rZW4tZGhjcTYiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC5uYW1lIjoiamVua2lucyIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6IjBkZTBjOWE3LWMyNDgtNDZlOC04OTgyLTJiYjNhMmM1NjQ0MSIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDp3ZWJhcHBzOmplbmtpbnMifQ.BjlGDEIMPWGagi9cTB2a7HdG3IsrXjNy5_JxtE2UVyv_XQZwHP_AIEU021SQmrXcvMwe6F2sSmhidvKjuQgBp15i_1lQadaqca0p1KWXSXaD2lEjpdg2qlbc46Hjjn6kqNmyhAsD_w2xQdAHooZffWyUgypzWfl3JP6Vz1_cbPtrcOy6MmSwzTWAlf3zid4BqrdddAwIHxQJfaY2LmO0qPNrhry5nazDw2_XRnaRrhELbpZp6f_j-fnTxVimaVo2ODS6aCOgmyLt4rlOsRJajOxGb25FqRp2kr0VxCJM_WhTvZIgcrjmfqlrFtrjetv-AkbJZG1h5Es497YUGKUcMw
+```
+
+This token can be used for authentication and authorization purposes within the Kubernetes cluster.
+
+**Find the kubeconfig file in the Master**
+
+To locate the kubeconfig file in the Master node, follow these steps:
+
+```bash
+# Navigate to the directory where kubeconfig file is stored
+cd ~/.kube
+
+# View the contents of the config file
+cat config
+```
+
+The `config` file contains all the necessary configurations of the Kubernetes cluster, including cluster information, authentication details, and context settings.
+
+
+
+### Stage 8: Docker Build and Tag:
+
+To configure the `Docker Registry Endpoint`, utilize the Pipeline Syntax:
+
+**Docker RegistryURL:** Do not fill it (As it will contain only Public DockerHub Repository)
+**Registry Credentails:** Add the Docker Credentials Specified in the Credentials
+
+The block will look like:
+
+```groovy
+withDockerRegistry(credentialsId: 'dockerhub-credentials') {
+    // some block
+}
+```
+
+Now, to build the image, use the docker build command:
+
+```groovy
+sh "docker build -t <DOCKERHUB_NAME>/<REPOSITORY NAME>:<TAG NAME> -f docker/Dockerfile ."
+sh "docker build -t adityadho/ekart:latest -f docker/Dockerfile ."
+```
+
+So our Docker Build and Tag Block looks as:
+
+```groovy
+stage('Docker Build and Tag') {
+    steps {
+        script {
+            withDockerRegistry(credentialsId: 'dockerhub-credentials') {
+               sh "docker build -t adityadho/ekart:latest -f docker/Dockerfile ."
+            }
+        }
+    }
+}
+```
+
+### Stage 9: Trivy for Vulnerability Scans
+
+Since Trivy is not installed yet, it needs to be installed in the Jenkins Server.
+
+```
+#Install Trivy:
+
+sudo apt-get install wget apt-transport-https gnupg lsb-release
+wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+sudo apt-get update
+sudo apt-get install trivy
+```
+
+OR
+
+```bash
+wget https://github.com/aquasecurity/trivy/releases/download/v0.18.3/trivy_0.18.3_Linux-64bit.deb
+sudo dpkg -i trivy_0.18.3_Linux-64bit.deb
+```
+
+To scan the image using trivy:
+
+```bash
+trivy image <image-name>
+sh "trivy image adityadho/ekart:latest"
+```
+
+But we will always need to log onto the console output to see the changes; rather than that we could store the report in some text file as below:
+
+```bash
+sh "trivy image adityadho/ekart:latest > trivy_report.txt"
+```
+
+Our Trivy Vulnerability scan will look like:
+
+```groovy
+stage('Trivy Scanning') {
+    steps {
+        sh "trivy image adityadho/ekart:latest > trivy_report.txt"
+    }
+}
+```
+
+
+### Stage 10: Pushing Docker Image to the DTR
+
+This stage will consist of the same steps as that of the Docker Build and Tag stage.
+
+We will use the docker push command to push the image into the Docker Trusted Repository.
+
+```groovy
+stage('PUSH Image to DTR') {
+    steps {
+        script {
+            withDockerRegistry(credentialsId: 'dockerhub-credentials') {
+               sh "docker push adityadho/ekart:latest"
+            }
+        }
+    }
+}
+```
+
+
+### Stage 11: Deploy using Kubernetes:
+
+In this stage, we will make use of the Pipeline Syntax `withKubeConfig` to configure Kubernetes.
+
+Before that, add a global credential and then add the secret text. The secret text will be the token that we have created above.
+
+```groovy
+withKubeConfig(caCertificate: '', clusterName: '', contextName: '', credentialsId: 'k8-token', namespace: 'webapps', restrictKubeConfigAccess: false, serverUrl: 'https://172.31.89.0:6443') {
+    // some block
+}
+```
+
+Before adding the Deployment steps, we need to make some changes in the `deploymentservice.yml`.
+
+Changes in the `deploymentservice.yml`:
+
+```yaml
+- Change the Image name to "image: adityadho/ekart:latest"
+- Change the Deployment ContainerPort from "8080" to "8070" [As in the Dockerfile we have exposed the 8070 and our application is running on PORT 8070]
+- Change the Port and targetPort both to 8070 [type: Nodeport]
+- PORT => On which the service is running on the Cluster
+- targetPort => Port on which our application is running
+```
+
+
+**Deploy the Kubernetes Cluster**
+
+To deploy the Kubernetes cluster, run the following commands:
+
+```sh
+kubectl apply -f deploymentservice.yml -n webapps
+kubectl get svc -n webapps
+```
+
+Ensure that Jenkins has the "kubectl installation" while running the pipelines. You can install it using the Jenkins Server:
+
+```sh
+sudo snap install kubectl --classic
+```
+Try and build the pipeline. The pipeline will run through all the stages.
+
+### Results 
+
+1. Jenkins Pipeline Dashboard
+2. Docker image Dashboard
+3. Our Sonar Dashboard
+4. Nexus Repo Dashboard
+
+```sh
+# To check the service running:
+
+kubectl get svc -n webapps
+
+# To log into the application:
+
+username: admin
+password: admin
+
+http://<worker-node-ip>:<generated-port-number-console-o/p>/home
+
+Perform any operations; it should work on that application.
+```
+**Working Demo**
+
+Video
+
+## Full Pipeline:
+```
+```
+
+
+**Conclusion:**
+
+Throughout this process, we've successfully developed the entire CI/CD pipeline and created the Jenkins file from scratch. I trust you found this journey engaging and insightful. Feel free to experiment and explore further on your own. Happy Learning!
+
+Source: https://youtu.be/yH9RoOFEKMY?si=j6qIRo3x3MBUG9gh 
