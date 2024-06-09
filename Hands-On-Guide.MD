@@ -352,7 +352,299 @@ Where, we will push our artifact that the Help of the POM.xml file will decide u
 
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-4. Setting Pipelines [Jenkins Server]
+#4. Setting Pipelines [Jenkins Dashboard]
 
+### Foundation of the Pipeline
 
+1. **Create a New Pipeline Job:**
+    - Open Jenkins Dashboard.
+    - Click on `New Item`.
+    - Enter an item name (e.g., `full-stack`).
+    - Select `Pipeline` and click `OK`.
 
+2. **Configure the Pipeline Job:**
+    - **General Settings**:
+      - Optionally, add a description of the pipeline.
+    - **Discard Old Builds**:
+      - Check the `Discard Old Builds` option.
+      - Enter the following:
+        ```sh
+        No. of Builds to Keep: 2
+        Days to keep Build: 100 Days
+        ```
+    - **Pipeline Definition**:
+      - Scroll down to the `Pipeline` section.
+      - Choose `Pipeline script` from the `Definition` dropdown.
+      - In the `Script` text box, enter your pipeline code.
+
+Note: No two pipeline stage names should be the same.
+
+## Jenkins Pipeline Stage Creation
+
+### Stage 1: Checkout
+
+The Checkout stage creates a local copy of the source code in Jenkins in the Workspace.
+
+#### Generating the Syntax for the Pipeline
+
+To generate the syntax for the pipeline, you can use the "Pipeline Syntax" generator in Jenkins. The syntax for checking out code from a Git repository would look like this:
+
+```
+git branch: 'main', url: 'https://github.com/adityadhopade/Ekart.git'
+```
+Here is how Stage 1 will look in the Jenkins pipeline script:
+```
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/adityadhopade/Ekart.git'
+            }
+        }
+    }
+}
+```
+
+### Stage 2: Compile Source Code
+
+As our base project is a SpringBoot Application, we have used Maven as the Build Tool. Therefore, we will use Maven to compile our code.
+
+The command to compile the source code using Maven is simply `mvn compile`. However, we should enclose it within the shell commands in the Groovy pipelines.
+
+Also, as we are using Maven as a tool here, we can define it in the `tools {}` block to ensure its version consistency across the pipeline. Use it below:
+
+```
+tools {
+    maven 'maven3'
+    jdk 'jdk17'
+}
+```
+So, the stage 2 should look like this:
+```
+pipeline {
+    agent any
+    tools {
+        maven 'maven3'
+        jdk 'jdk17'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/adityadhopade/Ekart.git'
+            }
+        }
+
+        stage('Compile Code') {
+            steps {
+                sh "mvn compile"
+            }
+        }
+    }
+}
+```
+### Stage 3: Unit Test
+
+Run the unit test cases using Maven. Although the test cases fail in this project, they are still useful in the development phase. However, failing test cases should not affect the production environment.
+
+The command to run the test cases is `mvn test`, but we need to skip the test cases for now. This can be done with the help of the `-DskipTests=true` flag.
+
+```groovy
+sh "mvn test -DskipTests=true"
+```
+
+Our Stage 3 will look like this:
+```
+pipeline {
+    agent any
+    tools {
+        maven 'maven3'
+        jdk 'jdk17'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/adityadhopade/Ekart.git'
+            }
+        }
+
+        stage('Compile Code') {
+            steps {
+                sh "mvn compile"
+            }
+        }
+
+        stage('Unit Test') {
+            steps {
+                sh "mvn test -DskipTests=true"
+            }
+        }
+    }
+}
+```
+### Stage 4: SonarScan Analysis
+
+Sonar Scanner is utilized to obtain information about Code Smells, Bugs, Quality Gates, and Quality Profile of our applications.
+
+#### Setting Environment Variables for Sonar Scanner
+
+We can set the environment variable for the Sonar Scanner, SCANNER_HOME, using the `environment` directive:
+
+```groovy
+environment {
+    SCANNER_HOME = tool 'sonar-scanner'
+}
+```
+
+Make use of the Pipeline Syntax Generator: To use the Sonar Scanner, we can utilize the withSonarQubeEnv block. We'll add the generated token (sonar-token) to access the Sonar dashboard.
+```
+withSonarQubeEnv(credentialsId: 'sonar-token', installationName: '') {
+    // some block
+}
+```
+Instead of providing the credentialsId of the server, we can simply pass the Sonar server that we have configured:
+
+```
+withSonarQubeEnv('sonar') {
+    // Sonar Scanner commands will go here
+}
+```
+To scan the project, we can utilize the executable stored under `$SCANNER_HOME/bin/sonar-scanner`. When scanning the project, we need to provide the following details:
+
+- Pass the name of the project: `-D sonar.projectKey=EKART`
+- Pass the project name: `-D sonar.projectName=EKART`
+- Pass the Java binaries (as our project is Java-based and consists of binary files): `-D sonar.java.binaries=.`
+
+Now the Block will look like:
+```
+withSonarQubeEnv('sonar') {
+    sh ''' $SCANNER_HOME/bin/sonar-scanner -D sonar.projectKey=EKART -D sonar.projectName=EKART -D sonar.java.binaries=.
+}
+```
+
+Our Stage 4 will look like this:
+
+```
+pipeline {
+    agent any
+    tools {
+        maven 'maven3'
+        jdk 'jdk17'
+    }
+
+    environment {
+        SCANNER_HOME = tool 'sonar-scanner'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/adityadhopade/Ekart.git'
+            }
+        }
+
+        stage('Compile Code') {
+            steps {
+                sh "mvn compile"
+            }
+        }
+
+        stage('Unit Test') {
+            steps {
+                sh "mvn test -DskipTests=true"
+            }
+        }
+
+        stage('Sonar Analysis') {
+            steps {
+                withSonarQubeEnv('sonar') {
+                    sh ''' $SCANNER_HOME/bin/sonar-scanner -D sonar.projectKey=EKART -D sonar.projectName=EKART \
+                    -D sonar.java.binaries=. '''
+                }
+            }
+        }
+    }
+}
+```
+### Stage 5: OWASP Dependency Check
+
+OWASP Dependency Check is utilized to detect and report publicly disclosed vulnerabilities, thereby enhancing application security. The generated report can be saved under our project for reference.
+
+To integrate OWASP Dependency Check into our pipeline, we can use the Pipeline Syntax Generator > `DependecyCheck: Invoke Dependency` Check as follows:
+
+```
+dependencyCheck additionalArguments: '', odcInstallation: 'DC'
+```
+We also need to provide additional arguments to scan the dependency files present under the "Pom.xml". We can accomplish this by using the `--scan` flag. Since the `Pom.xml` is located in the root directory, we specify it as `./`.
+
+```groovy
+dependencyCheck additionalArguments: '--scan ./', odcInstallation: 'DC'
+```
+
+OWASP Dependency Check generates the report in XML format. To specify the desired format for the report, we use the Dependency Check Format Generator.
+
+```groovy
+**/dependency-check-report.xml
+```
+
+Our pipeline block for specifying the report format will look like this:
+```
+dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+```
+Our pipeline block Stage 5 for OWASP Dependency Check will look like this:
+
+```
+stage('OWASP Dependency Check') {
+    steps {
+        dependencyCheck additionalArguments: '--scan ./', odcInstallation: 'DC'
+        dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+    }
+}
+```
+### Stage 6: Build Artifact using Maven
+
+To build the application artifact using Maven, we execute the command `mvn package`. Since we have skipped the test cases in an earlier stage, we need to include the `-DskipTests=true` flag to skip the tests during the build process.
+
+```groovy
+sh "mvn package -DskipTests=true"
+```
+The stage 6 for building the artifact using Maven will look like this:
+
+```
+stage('Build Application') {
+    steps {
+        sh "mvn package -DskipTests=true"
+    }
+}
+```
+
+### Stage 7: Deploy to Nexus Repository
+
+In the `pom.xml` file, the artifact is configured as a snapshot, which means it will be pushed into the "maven-snapshot" repository in the development stage, as it's not yet at the production level.
+
+#### Using Pipeline Syntax with Maven Environment
+
+We'll make use of the `withMaven` directive to provide Maven environment settings. This allows us to set the Maven version, JDK version, and utilize the global Maven settings configuration that we have set during the configuration of "Connect Jenkins to Nexus" [JENKINS SERVER].
+
+```groovy
+withMaven(globalMavenSettingsConfig: 'MyGlobalSettings', jdk: 'jdk17', maven: 'maven3', mavenSettingsConfig: '', traceability: true) {
+    // Deploy to Nexus repository steps will go here
+}
+```
+
+To deploy our artifact to the Nexus Repository, we can utilize the Maven command `mvn deploy`. 
+
+So, the stage 7 deploy artifact to nexus repository looks like :
+
+```groovy
+stage('Deploy to Nexus') {
+    steps {
+        withMaven(globalMavenSettingsConfig: 'global-maven', jdk: 'jdk17', maven: 'maven3', mavenSettingsConfig: '', traceability: true) {
+            sh "mvn deploy -DskipTests=true"
+        }
+    }
+}
+```
