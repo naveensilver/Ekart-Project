@@ -85,12 +85,15 @@ sudo systemctl status jenkins
 ```
 **Install Docker in Jenkins VM"**
 ```
-#installs Docker on your system
-sudo apt install docker.io
+#Install Docker
 
-# Adjust Docker Permissions: 
-sudo chmod 666 /var/run/docker.sock
+sudo apt-get update
+sudo apt-get install docker.io -y
+sudo usermod -aG docker $USER
+sudo chmod 777 /var/run/docker.sock 
+sudo docker ps
 ```
+
 **Access Jenkins Dashboard:**
 
 - After installation, access the Jenkins Dashboard from your web browser at `http://<IP_of_Jenkins_VM>`:8080.
@@ -167,17 +170,16 @@ Explanation:
 
 First, you need to install Docker on your system. Follow these steps:
 ```
-# updates the package index to ensure you get the latest version of Docker
-sudo apt update
+#Install Docker
 
-#installs Docker on your system
-sudo apt install docker.io
-
-# Adjust Docker Permissions: 
-sudo chmod 666 /var/run/docker.sock
-
-#The `/var/run/docker.sock` file is used by Docker to communicate with the Docker daemon. Changing permissions to `666` allows all users to interact with Docker. However, this is not recommended for security reasons.
+sudo apt-get update
+sudo apt-get install docker.io -y
+sudo usermod -aG docker $USER
+sudo chmod 777 /var/run/docker.sock 
+sudo docker ps
 ```
+After the docker installation, we create a sonarqube container (Remember added 9000 port in the security group)
+
 **Run SonarQube Docker Container:**
 ```
 docker run -d -p 9000:9000 sonarqube:lts-community
@@ -248,15 +250,15 @@ By following these steps, you'll successfully create a token in SonarQube and ad
 
 First, you need to install Docker on your system. Follow these steps:
 ```
-# updates the package index to ensure you get the latest version of Docker
-sudo apt update
+#Install Docker
 
-#installs Docker on your system
-sudo apt install docker.io
-
-# Adjust Docker Permissions: 
-sudo chmod 666 /var/run/docker.sock
+sudo apt-get update
+sudo apt-get install docker.io -y
+sudo usermod -aG docker $USER
+sudo chmod 777 /var/run/docker.sock 
+sudo docker ps
 ```
+After the docker installation, we create a Nexus container (Remember added 8081 port in the security group)
 **Run Sonar Nexus as Docker Container:**
 ```
 # Install Sonar Nexus using docker image 
