@@ -1,4 +1,25 @@
+# Deploy Full Stack Application using CICD Pipeline
 
+**Deploy Full Stack Application using Kubernetes, Docker, Jenkins, SonarQube, Maven, Nexus**
+
+## WORKFLOW OF THE APPLICATION | ARCHITECTURE 
+
+**🌟 Key Moments 🌟**
+
+- Configuring POM.xml
+- Setting up "Managed Files" => For Global Maven Settings
+- Setting Up Pipelines
+- Configuring the Control Plane and Data Plane Nodes in Kubernetes
+- Deploying to Kubernetes
+
+Prerequisites:
+Basic knowledge of Kubernetes, Jenkins, and AWS Account
+
+[MUST] Clone the Repository [For getting the Application Code]
+
+[GitHub Repository](https://github.com/naveensilver/Ekart-Project.git)
+
+Setting up the Instances and Security Group
 
 ## Setting up the Instances and Security Groups
 
