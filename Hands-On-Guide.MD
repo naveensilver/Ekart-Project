@@ -96,18 +96,17 @@ sudo chmod 666 /var/run/docker.sock
 - After installation, access the Jenkins Dashboard from your web browser at `http://<IP_of_Jenkins_VM>`:8080.
 
 **Jenkins Dashboard Login:**
+```
+# Default Credentials: 
 
-Default Credentials: 
-
-- **Name:** admin
-- **Password:** sudo cat [Path given in dialog box] (i.e., `sudo cat /var/lib/jenkins/secrets/initialAdminPassword`)
-
+Name: admin
+Password: cat <Path given in dialog box> (i.e., `sudo cat /var/lib/jenkins/secrets/initialAdminPassword`)
+```
 Explanation:
-
 - These are the default credentials provided during Jenkins installation.
 - To retrieve the password, you can use the command `sudo cat /var/lib/jenkins/secrets/initialAdminPassword` and paste the password in the Jenkins login prompt.
 
-### Setting up New Credentials
+#### Setting up New Credentials
 
 - **Username:** admin
 - **Password:** admin@123
