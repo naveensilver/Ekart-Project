@@ -19,8 +19,6 @@ Basic knowledge of Kubernetes, Jenkins, and AWS Account
 
 [GitHub Repository](https://github.com/naveensilver/Ekart-Project.git)
 
-Setting up the Instances and Security Group
-
 ## Setting up the Instances and Security Groups
 
 Create individual machines for Jenkins, Nexus, and Sonarqube, each with the following specifications:
