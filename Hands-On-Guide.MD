@@ -134,7 +134,7 @@ Explanation:
 4. Check the checkboxes next to the plugins you want to install.
 5. Click on the "Install without restart" button to install the selected plugins.
 
-### Configure Tools [JENKINS SERVER]
+### Configure Tools [Jenkins Dashboard]
 
 1. Navigate to "Manage Jenkins" > "Tool Configuration".
 
