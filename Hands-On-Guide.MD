@@ -31,7 +31,7 @@ Create individual machines for Jenkins, Nexus, and Sonarqube, each with the foll
 For Security Groups, add the following groups:
 
 1. **SMTP TCP 25:** This allows communication via SMTP on port 25.
-2. **Custom TCP - TCP Range from 30000 to 32767:** Reserved for Kubernetes NodePort Service, enabling communication within the specified port range.
+2. **Custom TCP - TCP Range from 30000 to 32768:** Reserved for Kubernetes NodePort Service, enabling communication within the specified port range.
 3. **Custom TCP - TCP Range from 3000 to 10000:** Reserved for maximum installations of tools within this port range.
 4. **HTTP - TCP - 80:** Allows HTTP communication over port 80.
 5. **HTTPS - TCP - 443:** Enables secure HTTP communication over port 443.
