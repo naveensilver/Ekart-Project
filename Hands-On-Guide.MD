@@ -350,9 +350,8 @@ We will be using two repositories in Nexus: `maven-release` and `maven-snapshot`
 
 Where, we will push our artifact that the Help of the POM.xml file will decide under the <versions></versions> it can either be 0.0.1-SNAPSHOT or 0.0.1
 
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-#4. Setting Pipelines [Jenkins Dashboard]
+# 4. Setting Pipelines [Jenkins Dashboard]
 
 ### Foundation of the Pipeline
 
