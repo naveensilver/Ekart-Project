@@ -264,6 +264,7 @@ sudo chmod 777 /var/run/docker.sock
 sudo docker ps
 ```
 After the docker installation, we create a Nexus container (Remember added 8081 port in the security group)
+
 **Run Sonar Nexus as Docker Container:**
 ```
 # Install Sonar Nexus using docker image 
