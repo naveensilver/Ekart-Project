@@ -417,7 +417,7 @@ The Checkout stage creates a local copy of the source code in Jenkins in the Wor
 To generate the syntax for the pipeline, you can use the "Pipeline Syntax" generator in Jenkins. The syntax for checking out code from a Git repository would look like this:
 
 ```
-git branch: 'main', url: 'https://github.com/adityadhopade/Ekart.git'
+git branch: 'main', url: 'https://github.com/naveensilver/Ekart-Project.git'
 ```
 Here is how Stage 1 will look in the Jenkins pipeline script:
 ```
@@ -427,7 +427,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/adityadhopade/Ekart.git'
+                git branch: 'main', url: 'https://github.com/naveensilver/Ekart-Project.git'
             }
         }
     }
@@ -452,25 +452,25 @@ So, the stage 2 should look like this:
 ```
 pipeline {
     agent any
-    tools {
-        maven 'maven3'
+    tools{
+        maven 'maven3' 
         jdk 'jdk17'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/adityadhopade/Ekart.git'
+                git branch: 'main', url: 'https://github.com/naveensilver/Ekart-Project.git'
             }
         }
-
-        stage('Compile Code') {
+        stage('Compile code') {
             steps {
-                sh "mvn compile"
+                sh 'mvn compile'
             }
         }
     }
 }
+
 ```
 ### Stage 3: Unit Test
 
@@ -486,31 +486,30 @@ Our Stage 3 will look like this:
 ```
 pipeline {
     agent any
-    tools {
-        maven 'maven3'
+    tools{
+        maven 'maven3' 
         jdk 'jdk17'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/adityadhopade/Ekart.git'
+                git branch: 'main', url: 'https://github.com/naveensilver/Ekart-Project.git'
             }
         }
-
         stage('Compile Code') {
             steps {
-                sh "mvn compile"
+                sh 'mvn compile'
             }
         }
-
         stage('Unit Test') {
             steps {
-                sh "mvn test -DskipTests=true"
+                sh 'mvn test -DskipTests=true'
             }
         }
     }
 }
+
 ```
 ### Stage 4: SonarScan Analysis
 
@@ -557,34 +556,29 @@ Our Stage 4 will look like this:
 ```
 pipeline {
     agent any
-    tools {
-        maven 'maven3'
+    tools{
+        maven 'maven3' 
         jdk 'jdk17'
     }
-
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
     }
-
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/adityadhopade/Ekart.git'
+                git branch: 'main', url: 'https://github.com/naveensilver/Ekart-Project.git'
             }
         }
-
         stage('Compile Code') {
             steps {
-                sh "mvn compile"
+                sh 'mvn compile'
             }
         }
-
         stage('Unit Test') {
             steps {
-                sh "mvn test -DskipTests=true"
+                sh 'mvn test -DskipTests=true'
             }
         }
-
         stage('Sonar Analysis') {
             steps {
                 withSonarQubeEnv('sonar') {
@@ -631,6 +625,7 @@ stage('OWASP Dependency Check') {
     }
 }
 ```
+
 ### Stage 6: Build Artifact using Maven
 
 To build the application artifact using Maven, we execute the command `mvn package`. Since we have skipped the test cases in an earlier stage, we need to include the `-DskipTests=true` flag to skip the tests during the build process.
@@ -675,6 +670,63 @@ stage('Deploy to Nexus') {
     }
 }
 ```
+Now the Jenkins Pipeline after Stage 7 
+```
+pipeline {
+    agent any
+    tools{
+        maven 'maven3' 
+        jdk 'jdk17'
+    }
+    environment {
+        SCANNER_HOME = tool 'sonar-scanner'
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/naveensilver/Ekart-Project.git'
+            }
+        }
+        stage('Compile Code') {
+            steps {
+                sh 'mvn compile'
+            }
+        }
+        stage('Unit Test') {
+            steps {
+                sh 'mvn test -DskipTests=true'
+            }
+        }
+        stage('Sonar Analysis') {
+            steps {
+                withSonarQubeEnv('sonar') {
+                    sh ''' $SCANNER_HOME/bin/sonar-scanner -D sonar.projectKey=EKART -D sonar.projectName=EKART \
+                    -D sonar.java.binaries=. '''
+                }
+            }
+        }
+        stage('OWASP Dependency Check') {
+            steps {
+                dependencyCheck additionalArguments: '--scan ./', odcInstallation: 'DC'
+                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+            }
+        }
+        stage('Build Application') {
+            steps {
+                sh "mvn package -DskipTests=true"
+            }
+        }
+        stage('Deploy to Nexus') {
+            steps {
+                withMaven(globalMavenSettingsConfig: 'global-maven', jdk: 'jdk17', maven: 'maven3', mavenSettingsConfig: '', traceability: true) {
+                    sh "mvn deploy -DskipTests=true"
+                }
+            }
+        }
+    }
+}
+
+```
 
 # 5. Setting Up the Kubernetes Cluster
 
@@ -703,6 +755,9 @@ To set up the Master Node and Worker Nodes using Kubeadm, follow these steps:
 ```bash
 sudo apt-get update -y
 sudo apt-get install docker.io -y
+sudo usermod -aG docker $USER
+sudo usermod -aG docker ubuntu
+sudo chmod 777 /var/run/docker.sock 
 sudo service docker restart
 ```
 2. Add the Kubernetes repository and update the package repository:
