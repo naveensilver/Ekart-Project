@@ -344,7 +344,8 @@ Now, Click on submit.
 4. **Add Repositories in POM.xml**
 
 Go to GitHub > POM.XML and Add the URL for both the `maven-release` and `maven-snapshot` in `<distributionManagement> </distributionManagement>` tag
-    ```
+   
+   ```
     <repository>
       <id>maven-releases</id>
       <name>maven-releases</name>
