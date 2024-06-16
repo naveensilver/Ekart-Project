@@ -345,7 +345,7 @@ Now, Click on submit.
 
 Go to GitHub > POM.XML and Add the URL for both the `maven-release` and `maven-snapshot` in `<distributionManagement> </distributionManagement>` tag
    
-   ```
+```
     <repository>
       <id>maven-releases</id>
       <name>maven-releases</name>
@@ -361,7 +361,8 @@ Go to GitHub > POM.XML and Add the URL for both the `maven-release` and `maven-s
     # <url>http://<Nexus_Public_IP>:8081/repository/maven-snapshots/</url>
 
     </snapshotRepository>
-    ```
+```
+
 ### Using Nexus Repositories 
 
 We will be using two repositories in Nexus: `maven-release` and `maven-snapshot`.
