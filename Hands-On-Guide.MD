@@ -981,7 +981,7 @@ Now, to build the image, use the docker build command:
 
 ```groovy
 sh "docker build -t <DOCKERHUB_NAME>/<REPOSITORY NAME>:<TAG NAME> -f docker/Dockerfile ."
-sh "docker build -t adityadho/ekart:latest -f docker/Dockerfile ."
+sh "docker build -t naveensilver/ekart:latest -f docker/Dockerfile ."
 ```
 
 So our Docker Build and Tag Block looks as:
@@ -991,7 +991,7 @@ stage('Docker Build and Tag') {
     steps {
         script {
             withDockerRegistry(credentialsId: 'dockerhub-credentials') {
-               sh "docker build -t adityadho/ekart:latest -f docker/Dockerfile ."
+               sh "docker build -t naveensilver/ekart:latest -f docker/Dockerfile ."
             }
         }
     }
@@ -1023,13 +1023,13 @@ To scan the image using trivy:
 
 ```bash
 trivy image <image-name>
-sh "trivy image adityadho/ekart:latest"
+sh "trivy image naveensilver/ekart:latest"
 ```
 
 But we will always need to log onto the console output to see the changes; rather than that we could store the report in some text file as below:
 
 ```bash
-sh "trivy image adityadho/ekart:latest > trivy_report.txt"
+sh "trivy image naveensilver/ekart:latest > trivy_report.txt"
 ```
 
 Our Trivy Vulnerability scan will look like:
@@ -1037,7 +1037,7 @@ Our Trivy Vulnerability scan will look like:
 ```groovy
 stage('Trivy Scanning') {
     steps {
-        sh "trivy image adityadho/ekart:latest > trivy_report.txt"
+        sh "trivy image naveensilver/ekart:latest > trivy_report.txt"
     }
 }
 ```
@@ -1054,7 +1054,7 @@ stage('PUSH Image to DTR') {
     steps {
         script {
             withDockerRegistry(credentialsId: 'dockerhub-credentials') {
-               sh "docker push adityadho/ekart:latest"
+               sh "docker push naveensilver/ekart:latest"
             }
         }
     }
@@ -1079,7 +1079,7 @@ Before adding the Deployment steps, we need to make some changes in the `deploym
 Changes in the `deploymentservice.yml`:
 
 ```yaml
-- Change the Image name to "image: adityadho/ekart:latest"
+- Change the Image name to "image: naveensilver/ekart:latest"
 - Change the Deployment ContainerPort from "8080" to "8070" [As in the Dockerfile we have exposed the 8070 and our application is running on PORT 8070]
 - Change the Port and targetPort both to 8070 [type: Nodeport]
 - PORT => On which the service is running on the Cluster
