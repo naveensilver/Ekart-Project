@@ -90,6 +90,7 @@ sudo systemctl status jenkins
 sudo apt-get update
 sudo apt-get install docker.io -y
 sudo usermod -aG docker $USER
+sudo usermod -aG docker ubuntu
 sudo chmod 777 /var/run/docker.sock 
 sudo docker ps
 ```
@@ -177,6 +178,7 @@ First, you need to install Docker on your system. Follow these steps:
 sudo apt-get update
 sudo apt-get install docker.io -y
 sudo usermod -aG docker $USER
+sudo usermod -aG docker ubuntu
 sudo chmod 777 /var/run/docker.sock 
 sudo docker ps
 ```
@@ -257,6 +259,7 @@ First, you need to install Docker on your system. Follow these steps:
 sudo apt-get update
 sudo apt-get install docker.io -y
 sudo usermod -aG docker $USER
+sudo usermod -aG docker ubuntu
 sudo chmod 777 /var/run/docker.sock 
 sudo docker ps
 ```
